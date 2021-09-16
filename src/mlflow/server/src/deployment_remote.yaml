@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+   name: mlflowserver
+   namespace: mlflow
+spec:
+   selector:
+      matchLabels:
+         app: mlflowserver
+   strategy:
+      type: Recreate
+   template:
+      metadata:
+         labels:
+            app: mlflowserver
+      spec:
+         containers:
+         - name: mlflowserver
+           image: mlflow_server:latest
+           ports:
+           - containerPort: 5002
+             name: mlflowserver
+           imagePullPolicy: Never
+           args: ["--remote"]
+           env:
+           - name: MYSQL_USERNAME
+             valueFrom:
+               secretKeyRef:
+                 key: username
+                 name: mysql-env
+           - name: MYSQL_PASSWORD
+             valueFrom:
+               secretKeyRef:
+                 key: password
+                 name: mysql-env
+           - name: GOOGLE_APPLICATION_CREDENTIALS
+             value: /var/secrets/google/gs_key.json
+           volumeMounts:
+           - name: google-cloud-storage-key
+             mountPath: /var/secrets/google
+         volumes:
+         - name: google-cloud-storage-key
+           secret:
+             secretName: gs-key
