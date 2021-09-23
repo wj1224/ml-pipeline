@@ -1,4 +1,4 @@
-[submodule "src/kubeflow_manifests"]
-	path = src/kubeflow_manifests
-	url = https://github.com/wj1224/manifests.git
+[submodule "k8s/kubeflow_manifests"]
+	path = k8s/kubeflow_manifests
+	url = https://github.com/wj1224/manifests
 	branch = wj_archived
