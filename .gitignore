@@ -1,2 +1,9 @@
+# cache
+__pycache__/
+.ipynb_checkpoint/
+
 # credentials
 gs_key.json
+
+# dataset
+coco_captioning/

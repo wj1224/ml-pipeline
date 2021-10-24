@@ -1,0 +1,98 @@
+apiVersion: "kubeflow.org/v1beta1"
+kind: Experiment
+metadata:
+  namespace: {NAMESPACE}
+  name: katib-example
+spec:
+  metricsCollectorSpec:
+    collector:
+    kind: StdOut
+    source:
+    filter:
+      metricsFormat:
+        - "([\\w\\@\\.\\:|-]+)\\s*=\\s*((-?\\d+)(\\.\\d+)?)"
+  objective:
+    type: minimize
+    goal: 0.0001
+    objectiveMetricName: loss
+  algorithm:
+    algorithmName: bayesianoptimization
+  parallelTrialCount: 1
+  maxTrialCount: 12
+  maxFailedTrialCount: 3
+  parameters:
+    - name: lr
+      parameterType: double
+      feasibleSpace:
+        min: "0.001"
+        max: "0.01"
+    - name: num-layers
+      parameterType: categorical
+      feasibleSpace:
+        list:
+          - "2"
+          - "4"
+          - "8"
+    - name: num-heads
+      parameterType: categorical
+      feasibleSpace:
+        list:
+          - "2"
+          - "4"
+          - "8"
+    - name: wordvec-dim
+      parameterType: categorical
+      feasibleSpace:
+        list:
+          - "256"
+          - "512"
+  trialTemplate:
+    primaryContainerName: training-container
+    trialParameters:
+      - name: learningRate
+        description: Learning rate for the training model
+        reference: lr
+      - name: numberLayers
+        description: number of transformer layers
+        reference: num-layers
+      - name: numberHeads
+        description: number of attention heads
+        reference: num-heads
+      - name: wordvectorDimension
+        description: Dimension W of word vectors
+        reference: wordvec-dim
+    trialSpec:
+      apiVersion: batch/v1
+      kind: Job
+      spec:
+        template:
+          metadata:
+            annotations:
+              sidecar.istio.io/inject: "false"
+          spec:
+            containers:
+              - name: training-container
+                image: image_captioning:latest
+                imagePullPolicy: Never
+                command:
+                  - "python"
+                  - "train.py"
+                  - "--max-train=500"
+                  - "--base-dir=/mnt/data/coco_captioning"
+                  - "--lr=${trialParameters.learningRate}"
+                  - "--num-layers=${trialParameters.numberLayers}"
+                  - "--num-heads=${trialParameters.numberHeads}"
+                  - "--wordvec-dim=${trialParameters.wordvectorDimension}"
+                volumeMounts:
+                - name: kfp-volume
+                  mountPath: /mnt
+                - name: dshm
+                  mountPath: /dev/shm
+            volumes:
+            - name: kfp-volume
+              persistentVolumeClaim:
+                claimName: pipeline-volume
+            - name: dshm
+              emptyDir:
+                medium: Memory
+            restartPolicy: Never
